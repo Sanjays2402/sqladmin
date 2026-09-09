@@ -351,7 +351,8 @@ class TestPrettyExport:
             values = await PrettyExport._get_export_row_values(
                 BookAdmin(), without_publisher, ["id", "title", "publisher"]
             )
-            assert values[2] is None
+            # A missing relation still exports as an empty cell.
+            assert values[2] == ""
 
     async def test_pretty_export_csv_basic(self):
         class UserAdmin(ModelView, model=User):
