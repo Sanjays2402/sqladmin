@@ -35,7 +35,9 @@ class PrettyExport:
             elif isinstance(formatted_value, (list, tuple)):
                 cell_value = ",".join(str(item) for item in formatted_value)
             else:
-                cell_value = formatted_value
+                # A to-one relationship: honour __str__ like every other branch,
+                # but keep None so it still exports as an empty cell.
+                cell_value = formatted_value if formatted_value is None else str(formatted_value)
         else:
             if isinstance(value, bool):
                 cell_value = "TRUE" if value else "FALSE"

@@ -80,6 +80,28 @@ class Item(Base):
         return self.sku
 
 
+class Publisher(Base):
+    __tablename__ = "publishers"
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String)
+
+    books = relationship("Book", back_populates="publisher")
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class Book(Base):
+    __tablename__ = "books"
+
+    id = Column(Integer, primary_key=True)
+    title = Column(String)
+    publisher_id = Column(Integer, ForeignKey("publishers.id"))
+
+    publisher = relationship("Publisher", back_populates="books")
+
+
 @pytest.fixture(autouse=True)
 def prepare_database():
     Base.metadata.create_all(engine)
@@ -306,6 +328,30 @@ class TestPrettyExport:
         assert values[0] == 1
         assert values[1] == "123 Main St"
         assert values[2] == "John Doe"
+
+    async def test_get_export_row_values_with_to_one_relationship(self):
+        class BookAdmin(ModelView, model=Book):
+            column_list = ["id", "title", "publisher"]
+            session_maker = session_maker
+            is_async = False
+
+        with session_maker() as session:
+            session.add(Publisher(id=1, name="P"))
+            session.add(Book(id=1, title="T", publisher_id=1))
+            session.add(Book(id=2, title="U"))
+            session.commit()
+
+            with_publisher = session.get(Book, 1)
+            values = await PrettyExport._get_export_row_values(
+                BookAdmin(), with_publisher, ["id", "title", "publisher"]
+            )
+            assert values[2] == "P"
+
+            without_publisher = session.get(Book, 2)
+            values = await PrettyExport._get_export_row_values(
+                BookAdmin(), without_publisher, ["id", "title", "publisher"]
+            )
+            assert values[2] is None
 
     async def test_pretty_export_csv_basic(self):
         class UserAdmin(ModelView, model=User):
