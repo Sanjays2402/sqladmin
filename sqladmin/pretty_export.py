@@ -37,7 +37,7 @@ class PrettyExport:
             else:
                 # A to-one relationship: honour __str__ like every other branch,
                 # but keep None so it still exports as an empty cell.
-                cell_value = formatted_value if formatted_value is None else str(formatted_value)
+                cell_value = None if formatted_value is None else str(formatted_value)
         else:
             if isinstance(value, bool):
                 cell_value = "TRUE" if value else "FALSE"
