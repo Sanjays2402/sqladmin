@@ -54,6 +54,23 @@ class ImportRequiredWidget(Base):
     profile = relationship("ImportProfile")
 
 
+class ImportTag(Base):
+    __tablename__ = "import_tag_validate"
+
+    id = Column(Integer, primary_key=True)
+    label = Column(String)
+    post_id = Column(Integer, ForeignKey("import_post_validate.id"))
+
+
+class ImportPost(Base):
+    __tablename__ = "import_post_validate"
+
+    id = Column(Integer, primary_key=True)
+    title = Column(String)
+
+    tags = relationship("ImportTag")
+
+
 class ImportUserAdmin(ModelView, model=ImportUser):
     column_import_list = [ImportUser.name, ImportUser.status]
 
@@ -200,6 +217,33 @@ async def test_validate_import_row_does_not_duplicate_relationship_errors(
     )
 
     assert errors["profile"] == ["Not a valid choice"]
+
+
+class ImportPostTagsAdmin(ModelView, model=ImportPost):
+    column_import_list = [ImportPost.title, ImportPost.tags]
+
+
+@pytest.mark.anyio
+async def test_validate_import_row_round_trips_valid_multi_select_value() -> None:
+    with session_maker() as session:
+        session.add(ImportTag(id=1, label="t1"))
+        session.commit()
+
+    model_view = _model_view(ImportPostTagsAdmin)
+    form_class = await model_view.scaffold_form(model_view._form_create_rules)
+    row = MultiDict([("title", "good"), ("tags", "1")])
+
+    merged, errors, _row_data = validate_import_row(
+        row,
+        model_view.get_import_columns(),
+        ImportPost,
+        form_class,
+        Admin._denormalize_wtform_data,
+    )
+
+    assert errors == {}
+    assert merged["title"] == "good"
+    assert merged["tags"] == ["1"]
 
 
 @pytest.mark.anyio
