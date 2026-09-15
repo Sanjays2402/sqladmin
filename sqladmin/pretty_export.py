@@ -25,6 +25,7 @@ class PrettyExport:
         Only used when `use_pretty_export = True`.
         """
         if name in model_view._relation_names:
+            cell_value: Any
             if isinstance(formatted_value, str):
                 cell_value = formatted_value
             elif isinstance(formatted_value, (set, frozenset)):
@@ -35,8 +36,11 @@ class PrettyExport:
             elif isinstance(formatted_value, (list, tuple)):
                 cell_value = ",".join(str(item) for item in formatted_value)
             else:
-                # A to-one relationship: honour __str__ like every other branch,
-                # but keep None so it still exports as an empty cell.
+                # A to-one relationship: str() it so this branch matches the others. A
+                # custom column_formatters entry may return None; keep that as None
+                # rather than exporting the string "None". A *missing* relation does
+                # not arrive here -- BASE_FORMATTERS turns it into Markup("") and the
+                # str branch takes it.
                 cell_value = None if formatted_value is None else str(formatted_value)
         else:
             if isinstance(value, bool):
